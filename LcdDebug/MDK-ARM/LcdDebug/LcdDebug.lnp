@@ -1,0 +1,28 @@
+--cpu Cortex-M3
+"lcddebug\startup_stm32f103xe.o"
+"lcddebug\main.o"
+"lcddebug\gpio.o"
+"lcddebug\usart.o"
+"lcddebug\stm32f1xx_it.o"
+"lcddebug\stm32f1xx_hal_msp.o"
+"lcddebug\stm32f1xx_hal_gpio_ex.o"
+"lcddebug\stm32f1xx_hal_tim.o"
+"lcddebug\stm32f1xx_hal_tim_ex.o"
+"lcddebug\stm32f1xx_hal_uart.o"
+"lcddebug\stm32f1xx_hal.o"
+"lcddebug\stm32f1xx_hal_rcc.o"
+"lcddebug\stm32f1xx_hal_rcc_ex.o"
+"lcddebug\stm32f1xx_hal_gpio.o"
+"lcddebug\stm32f1xx_hal_dma.o"
+"lcddebug\stm32f1xx_hal_cortex.o"
+"lcddebug\stm32f1xx_hal_pwr.o"
+"lcddebug\stm32f1xx_hal_flash.o"
+"lcddebug\stm32f1xx_hal_flash_ex.o"
+"lcddebug\stm32f1xx_hal_exti.o"
+"lcddebug\system_stm32f1xx.o"
+"lcddebug\lcd.o"
+"lcddebug\delay.o"
+--strict --scatter "LcdDebug\LcdDebug.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "LcdDebug.map" -o LcdDebug\LcdDebug.axf
