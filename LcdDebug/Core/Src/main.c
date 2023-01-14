@@ -20,11 +20,12 @@
 #include "main.h"
 #include "usart.h"
 #include "gpio.h"
-#include "LCD/lcd.h"
-#include "LCD/delay.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include "LCD/lcd.h"
+#include "LCD/delay.h"
 
 /* USER CODE END Includes */
 
@@ -35,6 +36,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define LOG_Y_INCREMENT 16
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,12 +49,19 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+// max: 18. WILL OVERFLOW IF WENT OUT OF BOUND
+int lineNum = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+/**
+ * @brief         : Appends a log message to the LCD screen. Main goal of this project.
+ * @param level   : Severity of the event. 0 -> Verbose(white), 1 -> Info(blue), 2 -> Warning(yellow), 3 -> Error(red), 4 -> Fatal(white on red)
+ * @param msg     : Message to be displayed
+*/
+void log(uint8_t level, char msg[]);
 
 /* USER CODE END PFP */
 
@@ -93,10 +104,18 @@ int main(void)
   LCD_Init();
 
   LCD_DisplayOn();
-  LCD_ShowString(10, 10, 200, 24, 24, "Testing testing?");
+  LCD_Clear(BLACK);
+  BACK_COLOR = BLACK;
+  
+  log(1, "LCD boot complete");
   
 
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+
+  log(2, "DS1 LED is on. Check status.");
+
+  int i = 0;
   
   /* USER CODE END 2 */
 
@@ -106,7 +125,11 @@ int main(void)
   {
 
     //HAL_UART_Transmit(&huart1, (uint8_t *) "Testing testing?\n", 18, 0xffff); //To recv: COM6
-    //HAL_Delay(1000);
+    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_2);
+    if(i++ == 12) {
+      log(4, "ERROR: Don't want to work any more");
+    }
+    HAL_Delay(1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -154,7 +177,40 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void log(uint8_t level, char message[]) {
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+  //TODO: Handle log messages when more than 18 lines are already present
 
+  //TODO: Handle long messages that take up more than one line
+  
+  char buf[128] = {0};
+  switch(level) {
+    case 0: // verbose
+      sprintf(buf, "%7.3f[V] %s", HAL_GetTick() / 1000.0,  message);
+      POINT_COLOR = WHITE;
+      break;
+    case 1: // debug
+      sprintf(buf, "%7.3f[D] %s", HAL_GetTick() / 1000.0, message);
+      POINT_COLOR = BLUE;
+      break;
+    case 2: // warning
+      sprintf(buf, "%7.3f[W] %s", HAL_GetTick() / 1000.0, message);
+      POINT_COLOR = YELLOW;
+      break;
+    case 3: // error
+      sprintf(buf, "%7.3f[E] %s", HAL_GetTick() / 1000.0, message);
+      POINT_COLOR = RED;
+      break;
+    case 4: // fatal
+      sprintf(buf, "%7.3f[F] %s", HAL_GetTick() / 1000.0, message);
+      POINT_COLOR = WHITE;
+      BACK_COLOR  = RED;
+      break;
+  }
+  LCD_ShowString(10, 10 + (lineNum++) * LOG_Y_INCREMENT, 220, LOG_Y_INCREMENT, 12, (uint8_t *)buf);
+  BACK_COLOR = BLACK;
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+}
 /* USER CODE END 4 */
 
 /**
