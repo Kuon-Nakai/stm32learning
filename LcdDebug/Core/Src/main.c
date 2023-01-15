@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 #include "LCD/lcd.h"
 #include "LCD/delay.h"
 
@@ -56,6 +57,7 @@ int lineNum = 0;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
 /**
  * @brief         : Appends a log message to the LCD screen. Main goal of this project.
  * @param level   : Severity of the event. 0 -> Verbose(white), 1 -> Info(blue), 2 -> Warning(yellow), 3 -> Error(red), 4 -> Fatal(white on red)
@@ -126,9 +128,8 @@ int main(void)
 
     //HAL_UART_Transmit(&huart1, (uint8_t *) "Testing testing?\n", 18, 0xffff); //To recv: COM6
     HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_2);
-    if(i++ == 12) {
-      log(4, "ERROR: Don't want to work any more");
-    }
+    if(i == 16) log(3, "Milti-line long message handling test");
+    if(i++ == 12) log(4, "ERROR: Don't want to work any more");
     HAL_Delay(1000);
     /* USER CODE END WHILE */
 
@@ -177,37 +178,38 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void log(uint8_t level, char message[]) {
+void log(uint8_t level, char msg[]) {
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
   //TODO: Handle log messages when more than 18 lines are already present
 
-  //TODO: Handle long messages that take up more than one line
+  //Done! Handle long messages that take up more than one line
   
   char buf[128] = {0};
   switch(level) {
     case 0: // verbose
-      sprintf(buf, "%7.3f[V] %s", HAL_GetTick() / 1000.0,  message);
+      sprintf(buf, "%7.3f[V] %s", HAL_GetTick() / 1000.0,  msg);
       POINT_COLOR = WHITE;
       break;
     case 1: // debug
-      sprintf(buf, "%7.3f[D] %s", HAL_GetTick() / 1000.0, message);
+      sprintf(buf, "%7.3f[D] %s", HAL_GetTick() / 1000.0, msg);
       POINT_COLOR = BLUE;
       break;
     case 2: // warning
-      sprintf(buf, "%7.3f[W] %s", HAL_GetTick() / 1000.0, message);
+      sprintf(buf, "%7.3f[W] %s", HAL_GetTick() / 1000.0, msg);
       POINT_COLOR = YELLOW;
       break;
     case 3: // error
-      sprintf(buf, "%7.3f[E] %s", HAL_GetTick() / 1000.0, message);
+      sprintf(buf, "%7.3f[E] %s", HAL_GetTick() / 1000.0, msg);
       POINT_COLOR = RED;
       break;
     case 4: // fatal
-      sprintf(buf, "%7.3f[F] %s", HAL_GetTick() / 1000.0, message);
+      sprintf(buf, "%7.3f[F] %s", HAL_GetTick() / 1000.0, msg);
       POINT_COLOR = WHITE;
       BACK_COLOR  = RED;
       break;
   }
-  LCD_ShowString(10, 10 + (lineNum++) * LOG_Y_INCREMENT, 220, LOG_Y_INCREMENT, 12, (uint8_t *)buf);
+  LCD_ShowString(10, 10 + lineNum * LOG_Y_INCREMENT, 220, LOG_Y_INCREMENT, 12, (uint8_t *)buf);
+  lineNum += strlen(buf) / 37 + 1; // line capacity = 37
   BACK_COLOR = BLACK;
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 }
