@@ -52,6 +52,7 @@
 /* USER CODE BEGIN PV */
 // max: 18. WILL OVERFLOW IF WENT OUT OF BOUND
 int lineNum = 0;
+char buf[128] = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,7 +62,7 @@ void SystemClock_Config(void);
 /**
  * @brief         : Appends a log message to the LCD screen. Main goal of this project.
  * @param level   : Severity of the event. 0 -> Verbose(white), 1 -> Info(blue), 2 -> Warning(yellow), 3 -> Error(red), 4 -> Fatal(white on red)
- * @param msg     : Message to be displayed
+ * @param msg     : Message to be displayed. 116 characters max.
 */
 void log(uint8_t level, char msg[]);
 
@@ -130,6 +131,7 @@ int main(void)
     HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_2);
     if(i == 16) log(3, "Milti-line long message handling test");
     if(i++ == 12) log(4, "ERROR: Don't want to work any more");
+    log(0, "Meaningless log");
     HAL_Delay(1000);
     /* USER CODE END WHILE */
 
@@ -180,11 +182,21 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void log(uint8_t level, char msg[]) {
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-  //TODO: Handle log messages when more than 18 lines are already present
-
-  //Done! Handle long messages that take up more than one line
-  
-  char buf[128] = {0};
+  //TODO: Overflow handler
+  if(lineNum >= 18) { // 18 lines already present
+    for(int8_t l = (strlen(msg) + 11) / 37; l >= 0; l--) {
+      for(uint16_t i = 10 + LOG_Y_INCREMENT; i < 289; i += LOG_Y_INCREMENT) {
+        LCD_Fill(10, i - LOG_Y_INCREMENT - 4, 240, i, BLACK);
+        for(uint16_t j = 10; j < 230; j++) {
+          for(uint16_t k = 0; k < 12; k++) {
+            LCD_Fast_DrawPoint(j, i + k - LOG_Y_INCREMENT, LCD_ReadPoint(j, i + k));
+          }
+        }
+      }
+    }
+    lineNum = 17 - (strlen(msg) + 11) / 37;
+  }
+  memset(buf, 0, 128);
   switch(level) {
     case 0: // verbose
       sprintf(buf, "%7.3f[V] %s", HAL_GetTick() / 1000.0,  msg);
