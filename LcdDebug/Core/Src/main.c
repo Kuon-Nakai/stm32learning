@@ -127,7 +127,7 @@ int main(void)
   while (1)
   {
 
-    //HAL_UART_Transmit(&huart1, (uint8_t *) "Testing testing?\n", 18, 0xffff); //To recv: COM6
+    HAL_UART_Transmit(&huart1, (uint8_t *) "Testing testing?\n", 18, 0xffff); //To recv: COM6
     HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_2);
     if(i == 16) log(3, "Milti-line long message handling test");
     if(i++ == 12) log(4, "ERROR: Don't want to work any more");

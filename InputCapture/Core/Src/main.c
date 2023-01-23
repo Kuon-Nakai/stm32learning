@@ -180,12 +180,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   if(GPIO_Pin == GPIO_PIN_5) {
     // HAL_Delay(100);
     if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_5) == key0expState) {
-      log(1, "Key 0: valid interaction");
+      //log(1, "Key 0: valid interaction");
+      if(!key0expState) {
+        LCD_Clear(BLACK);
+        lineNum = 0;
+      }
       key0expState = key0expState ? 0 : 1;
     }
-    else {
-      log(0, "Key 0: invalid interaction - ignored");
-    }
+    // else {
+    //   log(0, "Key 0: invalid interaction - ignored");
+    // }
   }
 }
 
