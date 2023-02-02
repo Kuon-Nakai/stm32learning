@@ -1,0 +1,17 @@
+*** Using Compiler 'V5.06 update 6 (build 750)', folder: 'D:\Keil_v5\ARM\ARMCC\Bin'
+Build target 'Signal'
+compiling main.c...
+../Core/Src/main.c(217): error:  #20: identifier "firstAct" is undefined
+  		if(firstAct == NULL) return;
+../Core/Src/main.c(218): error:  #20: identifier "firstAct" is undefined
+  		if(firstAct->active) {
+../Core/Src/main.c(288): warning:  #188-D: enumerated type mixed with another type
+  		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, !(segNum[n3] & 128u));
+../Core/Src/main.c(295): warning:  #188-D: enumerated type mixed with another type
+  		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, !(segNum[n2] & 128u));
+../Core/Src/main.c(302): warning:  #188-D: enumerated type mixed with another type
+  		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, !(segNum[n1] & 128u));
+../Core/Src/main.c: 3 warnings, 2 errors
+"Signal\Signal.axf" - 2 Error(s), 3 Warning(s).
+Target not created.
+Build Time Elapsed:  00:00:01
