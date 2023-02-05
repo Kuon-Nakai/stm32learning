@@ -5,7 +5,7 @@
 #include "dac.h"
 #include "dma.h"
 #include "tim.h"
-#include "usart.h"
+//#include "usart.h"
 #include "gpio.h"
 int *x;
 typedef void *COMP_HandleTypeDef;
@@ -139,6 +139,96 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 }
 #pragma endregion
 
+#pragma region EEPROM读写函数
+/**
+ * @brief       Writes value of 1 byte to the specified address in EEPROM.
+ * @param addr  Target address
+ * @param data  Value to be written
+ * @note        Supported types: bool, (un)signed char, (u)int8_t, (u)int_fast8_t, (u)int_least8_t
+ */
+void eeWrite8(uint8_t addr, uint8_t data)
+{
+    I2CStart();
+    I2CSendByte(0xA0);
+    I2CWaitAck();
+    I2CSendByte(addr);
+    I2CWaitAck();
+    I2CSendByte(data);
+    I2CWaitAck();
+    I2CStop();
+}
+
+uint8_t eeRead8(uint8_t addr)
+{
+    uint8_t eerBuf;
+    I2CStart();
+    I2CSendByte(0xA0);
+    I2CWaitAck();
+    I2CSendByte(addr);
+    I2CWaitAck();
+    I2CStop();
+    I2CStart();
+    I2CSendByte(0xA1);
+    I2CWaitAck();
+    eerBuf = I2CReceiveByte();
+    I2CSendNotAck();
+    I2CStop();
+    return eerBuf;
+}
+
+/**
+ * @brief       Writes value of 2 bytes to the specified address in EEPROM.
+ * @param addr  Target address
+ * @param data  Value to be written
+ * @note        Supported types: (un)signed short, (u)int16_t, (u)int_least16t
+ */
+void eeWrite16(uint8_t addr, uint16_t data)
+{
+    eeWrite8(addr, data >> 8);
+    eeWrite8(addr + 1, data & 0x00FF);
+}
+
+uint16_t eeRead16(uint8_t addr)
+{
+    return (eeRead8(addr) << 8) | eeRead8(addr + 1);
+}
+
+/**
+ * @brief       Writes value of ANYTHING to the specified address in EEPROM.
+ * @param addr  Target address
+ * @param data  Pointer to value
+ * @param size  Length of the value, in bytes
+ * @note        Supported types: Anything. Structs even.
+ * @warning     DON'T YOU DARE MAKE IT OVERFLOW!
+ */
+void eeWriteAny(uint8_t addr, void *data, uint8_t size)
+{
+    uint8_t *dat = data;
+    while (size--)
+            eeWrite8(addr++, *dat++);
+}
+
+/**
+ * @brief       Reads value of ANYTHING to the specified address in EEPROM.
+ * @param addr  Target address
+ * @param size  Length of the value, in bytes
+ * @retval      Pointer to requested data. Type is unspecified and needs to be casted.
+ * @note        Supported types: Anything. Structs even.
+ * @warning     Use free() to release the buffer after use!
+ */
+void *eeReadAny(uint8_t addr, uint8_t size)
+{
+    void *r = malloc(size);
+    if (r != 0)
+    {
+            uint8_t *p = r;
+            while (size--)
+                *p++ = eeRead8(addr++);
+    }
+    return r;
+}
+#pragma endregion
+
 #pragma region 延时执行函数的方法
 //设置任意定时器 开启溢出中断 在中断回调函数中调用tickDelays() (或直接把tickDelays改成HAL_TIM_PeriodElapsedCallback函数)
 //调用newDelay可以自动配置新的延时任务
@@ -253,7 +343,6 @@ void SegShow(uint8_t n1, uint8_t n2, uint8_t n3) {
 }
 #pragma endregion
 
-
 #pragma region ADC按键
 //按键识别可用ADC读取电压, 判断范围来实现
 //引脚: PA5 - ADC2_IN13
@@ -267,3 +356,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     //判断 执行
 }
 #pragma endregion
+
+//#define getKeyRange(v)                                                                                                           \
+    ((v < 2500) ? (v < 1500) ? 3 - !(v & 0xFF00) - !((v << 2) & 0xF000) : 5 - !((v << 1) & 0xF000) : (v < 3600) ? 6 + (v > 3000) \
+                                                                                                                : (v < 4000) << 3)
