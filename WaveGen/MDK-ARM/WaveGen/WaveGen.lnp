@@ -10,6 +10,7 @@
 "wavegen\dma.o"
 "wavegen\opamp.o"
 "wavegen\tim.o"
+"wavegen\usart.o"
 "wavegen\stm32g4xx_it.o"
 "wavegen\stm32g4xx_hal_msp.o"
 "wavegen\stm32g4xx_hal_adc.o"
@@ -36,6 +37,8 @@
 "wavegen\stm32g4xx_hal_opamp_ex.o"
 "wavegen\stm32g4xx_hal_tim.o"
 "wavegen\stm32g4xx_hal_tim_ex.o"
+"wavegen\stm32g4xx_hal_uart.o"
+"wavegen\stm32g4xx_hal_uart_ex.o"
 "wavegen\system_stm32g4xx.o"
 --strict --scatter "WaveGen\WaveGen.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols

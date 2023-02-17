@@ -25,6 +25,7 @@
 #include "dma.h"
 #include "opamp.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -87,6 +88,9 @@ typedef struct _WaveOptions {
 	HAL_GPIO_WritePin(GPIOD, 0x0002, 1); \
 	HAL_GPIO_WritePin(GPIOD, 0x0002, 0)
 
+#define transmit(m) \
+	HAL_UART_Transmit(&huart1, (uint8_t *)m, sizeof(m), 0x7FFF)
+
 #define SinSend(x, f)	/*Call sinSend(cnt+1) right after the calculated value is used to minimize waiting time*/ \
 	sinCalcBuf = ((int)(x * f * .5 - 1) << 16) + 1; \
 	memset(sinCalcRes, 0, 2); \
@@ -95,7 +99,7 @@ typedef struct _WaveOptions {
 	
 #define getKeyRange(v)                                                                                                           	\
     ((v < 2500) ? (v < 1500) ? 3 - !(v & 0xFF00) - !(v & 0xFC00) : 5 - !(v & 0xF800) : (v < 3600) ? 6 + (v > 3000) 				\
-                                                                                                                : ((~v & 0x0F80) != 0) << 3)
+                                                                                                                : (v < 4000) << 3)
 
 #define lcdSideUpdAll() \
 	for(int i = 9; --i; ) lcdUpdSide(i, false); \
@@ -127,13 +131,17 @@ uint16_t	graphY		= 310;
 WaveOptions opts[5];
 WaveOptions *currentOpts = opts;
 
-int32_t sinCalcBuf = 0;
+int32_t 	sinCalcBuf = 0;
 volatile int16_t sinCalcRes[2] = {0};
 
-uint16_t adcLoopbackLastVal = 220;
-uint16_t dacGraphLastVal = 220;
+uint16_t 	adcLoopbackLastVal = 220;
+uint16_t 	dacGraphLastVal = 220;
 
-bool waitCalc = false;
+bool 		waitCalc = false;
+
+uint8_t 	rxBuf[128] 	= {0};
+bool		rxIdle		= false;
+uint32_t	rxLen		= 0;
 
 /* USER CODE END PV */
 
@@ -198,11 +206,11 @@ int main(void)
   MX_DAC1_Init();
   MX_TIM2_Init();
   MX_COMP3_Init();
-  MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM4_Init();
   MX_TIM3_Init();
   MX_ADC1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 	
 	//options init
@@ -223,6 +231,12 @@ int main(void)
 		++currentOpts;
 	}
 	currentOpts = opts;
+	
+	transmit("Initializing...");
+	uint8_t *txBuf = (uint8_t *)"Init......";
+	HAL_UART_Transmit_DMA(&huart1, txBuf, 11);
+	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+	HAL_UART_Receive_DMA(&huart1, rxBuf, 128);
   
 	CORDIC_ConfigTypeDef cordicCfg;
 	cordicCfg.Function 	= CORDIC_FUNCTION_SINE;
@@ -269,7 +283,8 @@ int main(void)
     
 	HAL_TIM_Base_Start_IT(&htim4); //ADC trigger
 	HAL_TIM_Base_Start(&htim3);	   //DAC clock
-	HAL_TIM_Base_Start_IT(&htim6); //DAC updater
+	//HAL_TIM_Base_Start_IT(&htim6); //DAC updater
+	HAL_TIM_Base_Start_IT(&htim2); //new DAC updater
 	//HAL_TIM_Base_Start_IT(&htim7); //Graphic updater
 	
 	register int 	kr;
@@ -281,6 +296,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     while (1)
     {
+		if(rxIdle) {
+			rxIdle = false;
+			uint8_t *t = format("Len: %d, Data: %s", rxLen, rxBuf);
+			transmit(t);
+			free(t);
+			HAL_UART_Receive_DMA(&huart1, rxBuf, 128);
+		}
 		kr = getKeyRange(adcBuf[0]);
 //		uint8_t *t = format("%4d %4d", kr, adcBuf[0]);
 //		LCD_DisplayStringLine(Line8, t);
@@ -547,7 +569,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		HAL_ADC_Start_DMA(&hadc1, &adc1Buf, 1);
 		return;
 	}
-	if(htim->Instance == TIM6) { //DAC update
+	if(htim->Instance == TIM2) { //DAC update
 		uint32_t val;
 		if(opts[2].on && opts[2].cordic) {
 			while(waitCalc);
@@ -593,8 +615,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		}
 		else {
 			if(v > vl) {
-				while(v >= vl++) {
-					drawPt(vl, graphY, Magenta);
+				while(v >= vl) {
+					drawPt(vl++, graphY, Magenta);
 //					AAProc(vl, graphY + 1);
 //					AAProc(vl, graphY - 1);
 //					AAProc(vl - 1, graphY);
@@ -602,8 +624,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 				}
 			}
 			else {
-				while(v <= vl--) {
-					drawPt((uint16_t)(vl), graphY, Magenta);
+				while(v <= vl) {
+					drawPt(vl--, graphY, Magenta);
 //					AAProc(vl, graphY + 1);
 //					AAProc(vl, graphY - 1);
 //					AAProc(vl + 1, graphY);
@@ -614,21 +636,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		dacGraphLastVal = v;
 		
 		//ADC1 loopback graph - for testing
-		v = 220 - adc1Buf * 0.03947754, vl = adcLoopbackLastVal;
-		if(graphY == 310) {
-			drawPt((uint16_t)v, 310, Yellow);
-			graphY = 309;
-		}
-		else {
-			if(v > vl) {
-				while(v >= vl++) drawPt(vl, graphY, Yellow);
-			}
-			else {
-				while(v <= vl--) drawPt(vl, graphY, Yellow);
-			}
+//		v = 220 - adc1Buf * 0.03947754, vl = adcLoopbackLastVal;
+//		if(graphY == 310) {
+//			drawPt((uint16_t)v, 310, Yellow);
+//			graphY = 309;
+//		}
+//		else {
+//			if(v > vl) {
+//				while(v >= vl++) drawPt(vl, graphY, Yellow);
+//			}
+//			else {
+//				while(v <= vl--) drawPt(vl, graphY, Yellow);
+//			}
 			//drawPt((uint16_t)(220 - adc1Buf * 3.3 / 4096 * 49), graphY--, Yellow);
 			if(--graphY == 80) graphReset();
-		}
+//		}
 		adcLoopbackLastVal = v;
 	}
 }
@@ -670,8 +692,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 			if(topSel == 2) { //sine, start early calc
 				SinSend(0, currentOpts->F);
 			}
-			
-			//redraw img
 			break;
 		case GPIO_PIN_1: //b2 : switch options
 			HAL_Delay(128);
@@ -686,7 +706,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 			switch(sideSel) {
 				case 0:
 					currentOpts->on = ! currentOpts->on;
-					if(!currentOpts->altMode) emuSetTim(currentOpts->F);
+					/*if(!currentOpts->altMode)*/ emuSetTim(currentOpts->F);
 					//lcdUpdSide(0, true); //FIXME
 					lcdSideShow(Line0, onOffStr + 5 * currentOpts->on, true, currentOpts->on);
 					lcdUpdSide(1, false);
@@ -719,11 +739,13 @@ void HAL_COMP_TriggerCallback(COMP_HandleTypeDef *hcomp) { //b4 : Redraw graphs
 void graphReset() {
 	for(int i = 10; --i; ) LCD_DisplayStringLine(i * 24, (uint8_t *)"                ");
     LCD_DrawRect( 30, 320, 200, 250);
+	LCD_SetTextColor(Red);
 	LCD_DrawLine( 58, 310, 230, Horizontal); //0.0V
+	LCD_DrawLine(220, 310, 230, Horizontal); //3.3V
+	LCD_SetTextColor(White);
 	LCD_DrawLine( 73, 310, 230, Horizontal); //1.0V
 	LCD_DrawLine(122, 310, 230, Horizontal); //2.0V
 	LCD_DrawLine(171, 310, 230, Horizontal); //3.0V
-	LCD_DrawLine(220, 310, 230, Horizontal); //3.3V
 	graphY = 310;
 }
 void lcdUpdSide(uint8_t ln, bool hl) {

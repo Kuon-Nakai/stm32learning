@@ -40,4 +40,8 @@ wavegen\stm32g4xx_it.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h
 wavegen\stm32g4xx_it.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h
 wavegen\stm32g4xx_it.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h
 wavegen\stm32g4xx_it.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h
+wavegen\stm32g4xx_it.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h
+wavegen\stm32g4xx_it.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h
 wavegen\stm32g4xx_it.o: ../Core/Inc/stm32g4xx_it.h
+wavegen\stm32g4xx_it.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+wavegen\stm32g4xx_it.o: ../Core/Inc/usart.h

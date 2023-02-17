@@ -40,6 +40,8 @@ wavegen\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr.h
 wavegen\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h
 wavegen\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h
 wavegen\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h
+wavegen\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h
+wavegen\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h
 wavegen\main.o: ../Core/Inc/adc.h
 wavegen\main.o: ../Core/Inc/comp.h
 wavegen\main.o: ../Core/Inc/cordic.h
@@ -47,6 +49,7 @@ wavegen\main.o: ../Core/Inc/dac.h
 wavegen\main.o: ../Core/Inc/dma.h
 wavegen\main.o: ../Core/Inc/opamp.h
 wavegen\main.o: ../Core/Inc/tim.h
+wavegen\main.o: ../Core/Inc/usart.h
 wavegen\main.o: ../Core/Inc/gpio.h
 wavegen\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
 wavegen\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
