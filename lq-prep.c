@@ -5,7 +5,7 @@
 #include "dac.h"
 #include "dma.h"
 #include "tim.h"
-//#include "usart.h"
+#include "usart.h"
 #include "gpio.h"
 int *x;
 typedef void *COMP_HandleTypeDef;
@@ -21,6 +21,8 @@ DMA_HandleTypeDef hdma_usart1_rx;
     频率输出 1 -(J9)- PB4   , 2 -(J10)- PA15
     I2C 无需配置 直接用驱动 占PB6, PB7
 */
+
+//遇到startup卡在BKPT 0xAB, 在Options for target / target中开启Use MicroLIB
 
 //常用代码片段
 
@@ -140,6 +142,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 #pragma endregion
 
 #pragma region EEPROM读写函数
+//注意在CubeMX开启PB6 PB7的GPIO Output.
+//注意在每次读写后确保延时5ms
+//0xA0 写/定位, 0xA1读
+//可利用指针实现对任意类型的读写
+
 /**
  * @brief       Writes value of 1 byte to the specified address in EEPROM.
  * @param addr  Target address
@@ -343,6 +350,7 @@ void SegShow(uint8_t n1, uint8_t n2, uint8_t n3) {
 }
 #pragma endregion
 
+
 #pragma region ADC按键
 //按键识别可用ADC读取电压, 判断范围来实现
 //引脚: PA5 - ADC2_IN13
@@ -357,6 +365,36 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 }
 #pragma endregion
 
-//#define getKeyRange(v)                                                                                                           \
-    ((v < 2500) ? (v < 1500) ? 3 - !(v & 0xFF00) - !((v << 2) & 0xF000) : 5 - !((v << 1) & 0xF000) : (v < 3600) ? 6 + (v > 3000) \
-                                                                                                                : (v < 4000) << 3)
+
+
+#define getKeyRange(v)                                                                                                           \
+    ((v < 2500) ? (v < 1500) ? 3 - !(v & 0xFF00) - !(v & 0xF300) : 5 - !(v & 0xF700) : (v < 3600) ? 6 + (v & 0x0400) \
+                                                                                                                : (~v & 0x0F80) << 3)
+
+
+
+uint8_t getKeyRange_forHuman(uint16_t v) {
+    if (v < 2500) {
+        if (v < 1500) {
+            if (v < 256) return 1;
+            else if (v < 1024) return 2;
+            else return 3;
+        }
+        else if(v < 2048) return 4;
+        else return 5;
+    }
+    else {
+        if(v < 3600) {
+            if(v < 3000) return 6;
+            else return 7;
+        }
+        else {
+            if(v < 4000) return 8;
+            else return 0;
+        }
+    }
+}
+
+void main() {
+    
+}
