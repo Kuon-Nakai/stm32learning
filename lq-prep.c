@@ -19,10 +19,13 @@ DMA_HandleTypeDef hdma_usart1_rx;
         用HSI时钟源
     电压采集 1 -(J11)- PB15 , 2 -(J12)- PB2
     频率输出 1 -(J9)- PB4   , 2 -(J10)- PA15
-    I2C 无需配置 直接用驱动 占PB6, PB7
+    I2C PB6, PB7
 */
 
 //遇到startup卡在BKPT 0xAB, 在Options for target / target中开启Use MicroLIB
+//memcpy() size指内存复制字节数 并不是元素数量
+//I2C驱动不含初始化代码 需要设置好对应引脚
+//输入引脚没有合适TIM可用 可以利用模拟比较器remap到合适的TIM
 
 //常用代码片段
 
@@ -75,33 +78,43 @@ void main_() {
 #pragma endregion
 
 #pragma region 读取频率
-uint32_t freq = 0;
+//TIM设为Reset mode, TI1FP_.
+//输入引脚设为Input capture direct mode
+//收到输入信号后会先触发中断 再自动将计数器复位 可以简化代码
+//注意读取捕获值用HAL_TIM_ReadCapturedValue() 而不用GetCounter宏 因为计数器值会继续变化
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-    if(htim->Instance == TIM2) {
-        uint32_t val = __HAL_TIM_GetCounter(&htim2);
-        __HAL_TIM_SetCounter(&htim2, 0);
-        HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-        freq = /*some number*/ 1000000 / val;
+    if(htim->Instance == TIMx) {//判断
+        int freq = clk / psc / ckd / HAL_TIM_ReadCapturedValue(&htimx, TIM_CHANNEL_x);
+        //...
     }
 }
 #pragma endregion
 
-#pragma region 串口空闲中断 可接受不定长数据
-// 数据定长则直接用接收完成回调函数
-uint8_t rxBuf[32] = {0};
-
-void main_() {
-    //Init...
-    __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
-    HAL_UART_Receive_DMA(&huart1, rxBuf, 32);
+#pragma region PWM输入
+//TIM设为Reset mode, 触发源设为输入引脚
+//输入引脚设为Input capture direct mode, 上升沿捕获
+//另设一个引脚为Input capture indirect mode, 下降沿捕获
+//direct引脚捕获值即为周期 indirect引脚捕获值为高电平时间
+//注意判断引脚时需要用HAL_TIM_ACTIVE_CHANNEL_x 而不是TIM_CHANNEL_x
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
+    if(htim->Instance == TIMx && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_x) {
+        int t = HAL_TIM_ReadCapturedValue(&htimx, TIM_CHANNEL_x);
+        float d = HAL_TIM_ReadCapturedValue(&htimx, TIM_CHANNEL_y) / HAL_TIM_ReadCapturedValue(&htimx, TIM_CHANNEL_x);
+    }
 }
-//stm32g4xx_it.c
-void USART1_IRQHandler(void) {
-    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) != RESET) {
-        __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-        HAL_UART_DMAStop(&huart1);
-        int len = 32 - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
-        
+#pragma endregion
+
+#pragma region 串口空闲中断
+//用UART拓展库 工作量较小
+void main_() {
+    //...init
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *)rxBuf, (rxSize));
+}
+//回调函数
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
+    if(huart->Instance == USART1) {
+        //...
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *)rxBuf, (rxSize)); //重新打开
     }
 }
 #pragma endregion
@@ -244,7 +257,6 @@ void *eeReadAny(uint8_t addr, uint8_t size)
 //参数delay:    调用invoke前的溢出次数 note:无法避免1次溢出时间以内的偏差 在执行频率*不影响运行*的条件下 最好把频率设置较高
 //参数activate: 指向另一个DelayedAction类型的指针 在指向的任务延时结束 invoke调用完毕后 将当前任务active自动设置为true 在下一次溢出开始计时 不需要这个功能可传入NULL
 
-typedef void *Function();
 typedef struct {
     bool active;        //Whether the delay should be ticked
     uint32_t delay;      //Reduced by 1 every tick
@@ -257,7 +269,7 @@ typedef struct {
 DelayedAction *first = NULL;
 DelayedAction *last  = NULL;
 
-DelayedAction *newDelay(bool active, uint32_t delay, Function *invoke, DelayedAction *activateBy) {
+DelayedAction *newDelay(bool active, uint32_t delay, void (*invoke)(void), DelayedAction *activateBy) {
     DelayedAction *act = (DelayedAction *)malloc(sizeof(DelayedAction));
     if(act == NULL) return NULL;
     act->active = active;
@@ -350,7 +362,6 @@ void SegShow(uint8_t n1, uint8_t n2, uint8_t n3) {
 }
 #pragma endregion
 
-
 #pragma region ADC按键
 //按键识别可用ADC读取电压, 判断范围来实现
 //引脚: PA5 - ADC2_IN13
@@ -364,8 +375,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     //判断 执行
 }
 #pragma endregion
-
-
 
 #define getKeyRange(v)                                                                                                           \
     ((v < 2500) ? (v < 1500) ? 3 - !(v & 0xFF00) - !(v & 0xF300) : 5 - !(v & 0xF700) : (v < 3600) ? 6 + (v & 0x0400) \
