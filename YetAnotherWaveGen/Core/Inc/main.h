@@ -57,8 +57,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define FREQ_IN_Pin GPIO_PIN_1
+#define FREQ_IN_GPIO_Port GPIOA
+#define PWM_IN_Pin GPIO_PIN_7
+#define PWM_IN_GPIO_Port GPIOA
 #define TIM15_CH1___J9_Pin GPIO_PIN_14
 #define TIM15_CH1___J9_GPIO_Port GPIOB
+#define FREQ_INA15_Pin GPIO_PIN_15
+#define FREQ_INA15_GPIO_Port GPIOA
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
