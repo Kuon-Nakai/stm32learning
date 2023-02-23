@@ -37,15 +37,13 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-typedef void *Function(void);
-
 typedef struct _DelayedAction {
-	uint32_t 	delay;
-	Function *	invoke;
-	bool		active;
-	void *		next;
-	void *		prev;
-	void *		activate;
+	uint32_t 		delay;
+	void			(*invoke)(void);
+	bool			active;
+	void *			next;
+	void *			prev;
+	void *			activate;
 } DelayedAction;
 
 /* USER CODE END PTD */
@@ -83,7 +81,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
 void segShow(uint8_t, uint8_t, uint8_t);
-DelayedAction *new_delay(bool, uint32_t, Function, DelayedAction *);
+DelayedAction *new_delay(bool, uint32_t, void(*)(void), DelayedAction *);
 void appendWork(void);
 void aPass(void);
 void aStop(void);
@@ -150,9 +148,9 @@ int main(void)
 	aPass();
 	LCD_DisplayStringLine(Line7, (uint8_t *)"    B: Stop  ");
 //	if(!new_delay( true,  1000, (Function *)aPass, NULL)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
-	if(!new_delay( true, 44000, (Function *)aStop, NULL)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
-	if(!new_delay(false,  5000, (Function *)bPass, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
-	if(!new_delay(false, 25000, (Function *)bStop, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
+	if(!new_delay( true, 44000, aStop, NULL)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
+	if(!new_delay(false,  5000, bPass, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
+	if(!new_delay(false, 25000, bStop, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
 	
 	HAL_Delay(32);
 	
@@ -220,10 +218,10 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 void appendWork() {
-	if(!new_delay(false,  5000, (Function *)aPass, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
-	if(!new_delay(false, 45000, (Function *)aStop, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
-	if(!new_delay(false,  5000, (Function *)bPass, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
-	if(!new_delay(false, 25000, (Function *)bStop, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
+	if(!new_delay(false,  5000, aPass, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
+	if(!new_delay(false, 45000, aStop, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
+	if(!new_delay(false,  5000, bPass, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
+	if(!new_delay(false, 25000, bStop, lastAct)) LCD_DisplayStringLine(Line9, (uint8_t *)"MALLOC FAILED");
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
@@ -306,7 +304,7 @@ void bStop() {
 	ldn = 5;
 }
 
-DelayedAction *new_delay(bool active, uint32_t delay, Function func, DelayedAction *activatedBy) {
+DelayedAction *new_delay(bool active, uint32_t delay, void (*func)(void), DelayedAction *activatedBy) {
 	DelayedAction *n = (DelayedAction *)malloc(sizeof(DelayedAction));
 	n->active 		= active;
 	n->invoke 		= func;
