@@ -62,7 +62,11 @@ void DMA1_Channel1_IRQHandler(void);
 void DMA1_Channel2_IRQHandler(void);
 void DMA1_Channel3_IRQHandler(void);
 void DMA1_Channel4_IRQHandler(void);
+void DMA1_Channel5_IRQHandler(void);
+void DMA1_Channel6_IRQHandler(void);
 void ADC1_2_IRQHandler(void);
+void TIM1_UP_TIM16_IRQHandler(void);
+void TIM1_CC_IRQHandler(void);
 void TIM2_IRQHandler(void);
 void TIM4_IRQHandler(void);
 void USART1_IRQHandler(void);
@@ -71,7 +75,10 @@ void TIM7_IRQHandler(void);
 void DMA2_Channel1_IRQHandler(void);
 void DMA2_Channel2_IRQHandler(void);
 void DMA2_Channel3_IRQHandler(void);
+void DMA2_Channel4_IRQHandler(void);
+void DMA2_Channel5_IRQHandler(void);
 void COMP1_2_3_IRQHandler(void);
+void DMA2_Channel6_IRQHandler(void);
 void CORDIC_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 

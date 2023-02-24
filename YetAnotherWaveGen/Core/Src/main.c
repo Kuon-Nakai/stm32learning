@@ -51,8 +51,8 @@ typedef struct _WaveOptions
 	uint16_t dA; // CON mode ignore, x0.01
 	uint16_t F;  // CON mode ignore
 	uint16_t T;  // CON mode ignore
-	uint16_t O;
-	uint16_t dO;
+	int16_t O;
+	int16_t dO;
 	uint16_t D;  // PWM only
 	uint16_t HT; // PWM only
 } WaveOptions;
@@ -104,7 +104,7 @@ typedef struct _WaveOptions
 		lcdUpdSide(i--, false)
 
 #define debug(x)                                            \
-	uint8_t *t = format("%6d", __HAL_TIM_GetCounter(&htim3)); \
+	uint8_t *t = format("%6d", x); \
 	LCD_DisplayStringLine(Line1, t);                          \
 	free(t)
 
@@ -143,12 +143,27 @@ uint32_t rxLen = 0;
 
 //Analog input vars
 
-uint16_t pwmIn 	= 0;
-uint16_t freq1	= 0;
-uint16_t freq2	= 0;
-uint16_t freq3	= 0;
+bool aInput = false;
+
+//freq max ~32000Hz, min ~700Hz
+
+uint32_t pwmData[5] = {0};
+uint32_t f1Data[5] = {0};
+uint32_t f2Data[5] = {0};
+uint32_t f3Data[5] = {0};
+
+uint32_t npwm = 0;
+uint32_t nf1  = 0;
+uint32_t nf2  = 0;
+uint32_t nf3  = 0;
 
 uint32_t val;
+
+volatile uint32_t pwm1;
+volatile uint32_t pwm2;
+volatile uint32_t f1;
+volatile uint32_t f2;
+volatile uint32_t f3;
 
 /* USER CODE END PV */
 
@@ -169,6 +184,7 @@ void lcdUpdSide(uint8_t, bool);
 void drawPt(uint16_t, uint16_t, uint16_t);
 void graphReset(void);
 void AAProc(uint16_t, uint16_t);
+uint16_t filter(uint32_t *);
 
 /* USER CODE END PFP */
 
@@ -224,6 +240,7 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM8_Init();
   MX_TIM15_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
 
 	// options init
@@ -236,8 +253,8 @@ int main(void)
 		currentOpts->F = 1u;
 		currentOpts->HT = 0u; // No display
 		// currentOpts->T	= 1;		//No display
-		currentOpts->O = 0u; // No display
-		currentOpts->dO = 0u;
+		currentOpts->O = 0; // No display
+		currentOpts->dO = 0;
 		++currentOpts;
 	}
 	currentOpts = opts;
@@ -266,11 +283,13 @@ int main(void)
 	LCD_SetTextColor(White);
 	LCD_Clear(Black);
 	LCD_DrawRect(30, 320, 200, 250);
+	LCD_SetTextColor(Red);
 	LCD_DrawLine(58, 310, 230, Horizontal);  // 0.0V
+	LCD_DrawLine(220, 310, 230, Horizontal); // 3.3V
+	LCD_SetTextColor(White);
 	LCD_DrawLine(73, 310, 230, Horizontal);  // 1.0V
 	LCD_DrawLine(122, 310, 230, Horizontal); // 2.0V
 	LCD_DrawLine(171, 310, 230, Horizontal); // 3.0V
-	LCD_DrawLine(220, 310, 230, Horizontal); // 3.3V
 	LCD_DisplayStringLine(Line0, (uint8_t *)(topStr + topSel * 10));
 	lcdUpdSide(1, false);
 	lcdUpdSide(2, false);
@@ -306,11 +325,15 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim7); //Graphic updater
 
 	//Analog input
-	HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_2);
-	HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);
-	HAL_TIM_IC_Start_IT(&htim8, TIM_CHANNEL_1);
-	HAL_TIM_IC_Start_IT(&htim15, TIM_CHANNEL_1);
+	HAL_COMP_Start(&hcomp1);
+	HAL_COMP_Start(&hcomp2);
+	HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_1, &pwm1, 1);
+	HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_2, &pwm2, 1);
+	HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, &f1, 1);
+	HAL_TIM_IC_Start_DMA(&htim8, TIM_CHANNEL_1, &f2, 1);
+	HAL_TIM_IC_Start_DMA(&htim15, TIM_CHANNEL_1, &f3, 1);
+	
+	HAL_TIM_Base_Start_IT(&htim16);
 
 	register int kr;
 	register bool waitLift = false;
@@ -321,24 +344,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		if (rxIdle)
-		{
-			rxIdle = false;
-			uint8_t *t = format("Len: %d, Data: %s", rxLen, rxBuf);
-			transmit(t);
-			free(t);
-			HAL_UART_Receive_DMA(&huart1, rxBuf, 128);
-		}
 		kr = getKeyRange(adcBuf[0]);
 		//		uint8_t *t = format("%4d %4d", kr, adcBuf[0]);
 		//		LCD_DisplayStringLine(Line8, t);
 		//		free(t);
+		
 		if (!kr)
 		{
 			waitLift = false;
 			continue;
 		}
-		if (!waitLift && kr == getKeyRange(adcBuf[1]))
+		if (!waitLift && !aInput && kr == getKeyRange(adcBuf[1]))
 		{
 			switch (getKeyRange(adcBuf[0]))
 			{
@@ -665,21 +681,66 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+uint16_t filter(uint32_t *arr) {
+	int max = 0, min = 1, sum = 0;
+	int *cpy = (int *)malloc(5 * sizeof(int));
+	memcpy(cpy, arr, 5 * sizeof(int));
+	for(int i = 4; i >= 0; i--) {
+		if(*(cpy + i) > *(cpy + max)) max = i;
+		if(*(cpy + i) < *(cpy + min)) min = i;
+	}
+	for(int i = 4; i >= 0; i--) {
+		if(i == max || i == min) continue;
+		sum += *(cpy + i);
+	}
+	free(cpy);
+	return (sum / 3);
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if (htim->Instance == TIM1 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) { //PWM in
-		pwmIn = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_2) * 100 / HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_2);
+	if (htim->Instance == TIM16) {
+		pwmData[npwm++] = pwm1 * 100 / pwm2;
+		if(npwm == 5) npwm = 0;
+		
+//		f1Data[nf1++] = 1000000 / f1;
+//		if(nf1 == 5) nf1 = 0;
+		
+		f2Data[nf2++] = f2; // 1250 - 100
+		if(nf2 == 5) nf2 = 0;
+	
+		f3Data[nf3++] = f3; 
+		if(nf3 == 5) nf3 = 0;
+		
+		if(aInput) 
+		{
+			int x = filter(f3Data) - 100;
+			if (x < 0) currentOpts->A = 0;
+			else if(x > 1250) currentOpts->A = 4095;
+			else currentOpts->A = x * 4095/ 1250;
+			currentOpts->dA = currentOpts->A * 330 / 0x0FFF;
+			x = filter(f2Data);
+			if(currentOpts == &opts[2]) {
+				x -= 600;
+				//debug(x);
+				int ot  = (4095 - currentOpts->A) * x / 1000;
+				int max = 2048 - (currentOpts->A / 2);
+				int min = -2048 + (currentOpts->A / 2);
+				currentOpts->O  = (ot > max) ? max : (ot < min) ? min : ot; 
+				//debug(currentOpts->O);
+			}
+			else {
+				x -= 50;
+				int ot  = x * 4095 / 1250;
+				int max = 4095 - currentOpts-> A;
+				currentOpts->O = ot > max ? max : ot < 0 ? 0 : ot;
+			}
+			currentOpts->dO = currentOpts->O * 165 / 2048;
+			currentOpts->D = filter(pwmData);
+			currentOpts->HT = 100 * currentOpts->D / (float)opts[0].F;
+			lcdSideUpdAll();
+		}
 		return;
-	}
-	if (htim->Instance == TIM4) { //Freq in 1
-		freq1 = 0x7FFF / HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_1);
-		return;
-	}
-	if (htim->Instance == TIM8) { //Freq in 2
-		freq2 = 0x7FFF / HAL_TIM_ReadCapturedValue(&htim8, TIM_CHANNEL_1);
-	}
-	if (htim->Instance == TIM15) { //Freq in 3
-		freq3 = 0x7FFF / HAL_TIM_ReadCapturedValue(&htim15, TIM_CHANNEL_1);
 	}
 	if (htim->Instance == TIM6)
 	{
@@ -870,12 +931,15 @@ void HAL_COMP_TriggerCallback(COMP_HandleTypeDef *hcomp)
 { // b4 : Redraw graphs
 	if (hcomp->Instance != COMP3) return;
 	HAL_Delay(32);
-	if (HAL_COMP_GetOutputLevel(&hcomp3) != COMP_OUTPUT_LEVEL_HIGH)
-		return;
-	HAL_TIM_Base_Stop_IT(&htim7);
-	graphReset();
-	__HAL_TIM_SET_COUNTER(&htim7, 0xFFFFu);
-	HAL_TIM_Base_Start_IT(&htim7);
+	// if (HAL_COMP_GetOutputLevel(&hcomp3) != COMP_OUTPUT_LEVEL_HIGH)
+	// 	return;
+	// HAL_TIM_Base_Stop_IT(&htim7);
+	// graphReset();
+	// __HAL_TIM_SET_COUNTER(&htim7, 0xFFFFu);
+	// HAL_TIM_Base_Start_IT(&htim7);
+
+	//new b4: Enable/ Disable analog input
+	aInput = !aInput;
 }
 
 void graphReset()
