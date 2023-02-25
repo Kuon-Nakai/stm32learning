@@ -3,7 +3,6 @@
 "dactest\main.o"
 "dactest\gpio.o"
 "dactest\dac.o"
-"dactest\dma.o"
 "dactest\tim.o"
 "dactest\stm32g4xx_it.o"
 "dactest\stm32g4xx_hal_msp.o"

@@ -19,13 +19,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dac.h"
-#include "dma.h"
 #include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,17 +34,24 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define Pi 3.141593
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define PwmFunc (4095 * (__HAL_TIM_GetCounter(&htim2) < 1024) + 0)
+//#define TriFunc	(opts[1].A * ((__HAL_TIM_GetCounter(&htim3) % 2) ? (1 - (float)__HAL_TIM_GetCounter(&htim3) / __HAL_TIM_GET_AUTORELOAD(&htim3)) : \
+	((float)__HAL_TIM_GetCounter(&htim3) / __HAL_TIM_GET_AUTORELOAD(&htim3))) + opts[1].O)
+#define SawFunc (4095 * (float)__HAL_TIM_GetCounter(&htim2) / __HAL_TIM_GET_AUTORELOAD(&htim2) + 0)
+// Triangle wave alg: uses a saw func but twice the size
+#define TriFunc (4095 * fabs((float)__HAL_TIM_GetCounter(&htim2) / __HAL_TIM_GET_AUTORELOAD(&htim2) * 2 - 1) + 0)
+#define SinFunc (4095 * sin((float)__HAL_TIM_GetCounter(&htim2) / __HAL_TIM_GET_AUTORELOAD(&htim2) * Pi * 2) / 2 + 0 + 2048)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint32_t val;
+uint16_t val;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,9 +64,11 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	val = __HAL_TIM_GetCounter(&htim2);
-	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
-	HAL_TIM_Base_Start_IT(&htim3);
+	val = SinFunc;
+	//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
+	HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, val);
+	//HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
+	//HAL_TIM_Base_Start_IT(&htim2);
 }
 
 /* USER CODE END 0 */
@@ -93,16 +101,16 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_DAC1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   
-  HAL_TIM_Base_Start_IT(&htim3);
+  
   HAL_TIM_Base_Start(&htim2);
-  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
-
+  //HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
+	HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
+  HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */

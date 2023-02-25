@@ -311,10 +311,10 @@ int main(void)
 
 	// HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, 0);
 	// HAL_DAC_SetValue(&hdac3, DAC_CHANNEL_1, DAC_ALIGN_12B_R, 0);
-	// HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
-	// HAL_DAC_Start(&hdac3, DAC_CHANNEL_1);
-	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
-	HAL_DAC_Start_DMA(&hdac3, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
+	HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
+	HAL_DAC_Start(&hdac3, DAC_CHANNEL_1);
+//	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
+//	HAL_DAC_Start_DMA(&hdac3, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
 
 	__HAL_TIM_SetAutoreload(&htim7, 1000000 / GRAPH_UPD_F);
 
@@ -763,13 +763,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		else
 			val = 0;
 
-		// if (HAL_DAC_SetValue(&hdac3, DAC_CHANNEL_1, DAC_ALIGN_12B_R, val) != HAL_OK)
-		// 	LCD_DisplayStringLine(Line1, (uint8_t *)"ERR-DAC3");
-		// if (HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, val) != HAL_OK)
-		// 	LCD_DisplayStringLine(Line2, (uint8_t *)"ERR-DAC1");
+		if (HAL_DAC_SetValue(&hdac3, DAC_CHANNEL_1, DAC_ALIGN_12B_R, val) != HAL_OK)
+			LCD_DisplayStringLine(Line1, (uint8_t *)"ERR-DAC3");
+		if (HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, val) != HAL_OK)
+			LCD_DisplayStringLine(Line2, (uint8_t *)"ERR-DAC1");
 
-		HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
-		HAL_DAC_Start_DMA(&hdac3, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
+//		HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
+//		HAL_DAC_Start_DMA(&hdac3, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
 		//		if(HAL_DAC_Start(&hdac1, DAC_CHANNEL_1) != HAL_OK) LCD_DisplayStringLine(Line2, (uint8_t *)"ERR-DAC1-start");
 		//		if(HAL_DAC_Start(&hdac3, DAC_CHANNEL_1) != HAL_OK) LCD_DisplayStringLine(Line1, (uint8_t *)"ERR-DAC3-start");
 		//		dac1val = val;
@@ -1027,7 +1027,7 @@ void lcdSideShow(uint8_t Line, const uint8_t *ptr, bool highlight, bool green)
 inline void emuSetTim(const uint16_t f)
 {
 	HAL_TIM_Base_Stop_IT(&htim3);
-	__HAL_TIM_SetAutoreload(&htim3, (uint16_t)(10000 / f));
+	__HAL_TIM_SetAutoreload(&htim3, (uint16_t)(100000 / f));
 	__HAL_TIM_SetCounter(&htim3, 65535);
 	HAL_TIM_Base_Start_IT(&htim3);
 }

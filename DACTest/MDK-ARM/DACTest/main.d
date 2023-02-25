@@ -33,6 +33,6 @@ dactest\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h
 dactest\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h
 dactest\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h
 dactest\main.o: ../Core/Inc/dac.h
-dactest\main.o: ../Core/Inc/dma.h
 dactest\main.o: ../Core/Inc/tim.h
 dactest\main.o: ../Core/Inc/gpio.h
+dactest\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
