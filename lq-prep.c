@@ -91,6 +91,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 #pragma endregion
 
 #pragma region PWM输入
+//Alt: Combined channel - PWM input
+//原理上相同
+
 //TIM设为Reset mode, 触发源设为输入引脚
 //输入引脚设为Input capture direct mode, 上升沿捕获
 //另设一个引脚为Input capture indirect mode, 下降沿捕获
@@ -258,12 +261,12 @@ void *eeReadAny(uint8_t addr, uint8_t size)
 //参数activate: 指向另一个DelayedAction类型的指针 在指向的任务延时结束 invoke调用完毕后 将当前任务active自动设置为true 在下一次溢出开始计时 不需要这个功能可传入NULL
 
 typedef struct {
-    bool active;        //Whether the delay should be ticked
-    uint32_t delay;      //Reduced by 1 every tick
-    Function *invoke;   //Function pointer, to be called when delay reaches 0
-    void *next;         //Next element in chain. Nullable
-    void *prev;         //Prev element in chain. Nullable
-    void *activate;     //Activates the specified delayed action after this action is performed. Nullable
+    bool active;            //Whether the delay should be ticked
+    uint32_t delay;         //Reduced by 1 every tick
+    void (*invoke)(void);   //Function pointer, to be called when delay reaches 0
+    void *next;             //Next element in chain. Nullable
+    void *prev;             //Prev element in chain. Nullable
+    void *activate;         //Activates the specified delayed action after this action is performed. Nullable
 } DelayedAction;
 
 DelayedAction *first = NULL;
@@ -325,6 +328,39 @@ void tickDelays() {
 }
 #pragma endregion
 
+#pragma region 延时函数改进 - 待测试
+//尝试利用定时器降低资源占用并简化存储结构
+
+typedef struct _DelayedFunction {
+    //DelayedFunction *prev;
+    DelayedFunction *next;
+    DelayedFunction *trig;
+    void (*invoke)(void);
+    uint32_t delay;
+} DelayedFunction;
+
+DelayedFunction *currentDelay;
+TIM_HandleTypeDef *hdelaytim;
+uint32_t delayCh;
+
+DelayedFunction *addDelay(uint32_t t, void (*func)(void), DelayedFunction *after) {
+    DelayedFunction *r;
+    r->invoke = func;
+    r->trig = after;
+    if(after) {
+        if(after->next) {
+            if(after->next->next) r->next = after->next->next;
+            after->next = r;
+            r->delay = t;
+            return r;
+        }
+        after->next = r;
+        //TODO:
+    }
+}
+
+#pragma endregion
+
 //拓展板模块
 #pragma region 数码管
 //连接 SER RCK SCK 控制锁存器
@@ -373,6 +409,67 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if(hadc->Instance != ADC2) return;
     HAL_ADC_GetValue(&hadc2);
     //判断 执行
+}
+#pragma endregion
+
+#pragma region 队列结构
+typedef struct _QueueItem {
+    void *val;
+    QueueItem *next;
+    QueueItem *prev;
+} QueueItem;
+typedef struct _Queue {
+    int capacity;
+    QueueItem *first;
+    QueueItem *last;
+    void (*onForcedOut)(void *);
+} Queue;
+inline void qpush(Queue *q, void *value) {
+    QueueItem *qi = (QueueItem *)malloc(sizeof(QueueItem));
+    qi->val = value;
+    if(q->capacity) {
+        q->capacity--;
+        if(q->first) {
+            q->last->next = qi;
+            q->last = qi;
+            return;
+        }
+        q->first = qi;
+        q->last = qi;
+        return;
+    }
+    QueueItem *p = q->last;
+    q->last = q->last->prev;
+    q->onForcedOut(p->val);
+    free(p);
+    p = NULL;
+    qi->next = q->first;
+    q->first = qi;
+}
+inline void *qpull(Queue *q) {
+    void *v = q->last->val, *p = q->last;
+    q->capacity++;
+    q->last = q->last->prev;
+    free(p);
+    p = NULL;
+    return v;
+}
+inline void qrm(Queue *q) {
+    QueueItem *p = q->first, *p1 = p;
+    while(p) {
+        p = p1->next;
+        free(p1);
+        p1 = p;
+    }
+    free(q);
+}
+inline Queue *qnew(int len, void (*onForcedOut)(void *)) {
+    Queue *q = (Queue *)malloc(sizeof(Queue));
+    q->capacity = len;
+    q->onForcedOut = onForcedOut;
+    q->first = NULL;
+    q->last = NULL;
+    return q;
 }
 #pragma endregion
 
