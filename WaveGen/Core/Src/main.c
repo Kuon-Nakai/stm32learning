@@ -219,7 +219,7 @@ int main(void)
 		currentOpts->pin	= 2u;		//format
 		currentOpts->altMode= false;	//str+10, +15
 		currentOpts->opAmp	= true;		//"OAmp"
-		currentOpts->cordic = false;		//"Cord"
+		currentOpts->cordic = false;	//"Cord"
 		currentOpts->A		= 4095;		//No display
 		currentOpts->dA		= 330;
 		currentOpts->D		= 0;

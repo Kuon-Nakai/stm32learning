@@ -212,12 +212,14 @@ int main(void)
 	  }
 	  if(!paraPage && ra) {
 		  updA();
+		  updAx();
 		  recA[irA++] = a;
 		  if(irA == 5) irA = 0;
 		  ra = false;
 	  }
 	  if(!paraPage && rb) {
 		  updB();
+		  updBx();
 		  recB[irB++] = b;
 		  if(irB == 5) irB = 0;
 		  rb = false;

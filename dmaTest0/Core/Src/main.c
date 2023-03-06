@@ -20,17 +20,14 @@
 #include "main.h"
 #include "dac.h"
 #include "dma.h"
-#include "dma2d.h"
 #include "lptim.h"
-#include "ltdc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-#include "fmc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +47,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint16_t val;
+uint16_t val = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,9 +58,14 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+int fputc(int ch, FILE *f) {
+  //HAL_UART_Transmit(&huart1, (const uint8_t *)&ch, 1, 0xFFFF);
+  return ch;
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if(htim->Instance == TIM1) {
-		val = __HAL_TIM_GetCounter(&htim2) ? 0 : 4095;
+		//val = __HAL_TIM_GetCounter(&htim2) ? 0 : 4095;
 		//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
 		//HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, val);	
 	}
@@ -101,19 +103,18 @@ int main(void)
   MX_DMA_Init();
   MX_DAC1_Init();
   MX_TIM2_Init();
-  MX_LTDC_Init();
   MX_TIM1_Init();
   MX_USART1_UART_Init();
-  MX_DMA2D_Init();
-  MX_FMC_Init();
   MX_LPTIM1_Init();
   /* USER CODE BEGIN 2 */
 
-	HAL_LPTIM_Counter_Start(&hlptim1, 0);
-	HAL_TIM_Base_Start(&htim2);
-	HAL_TIM_Base_Start_IT(&htim1);
-
-	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
+	// HAL_LPTIM_Counter_Start(&hlptim1, 0);
+	// HAL_TIM_Base_Start(&htim2);
+	//HAL_TIM_Base_Start_IT(&htim1);
+	//HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, &val, 1, DAC_ALIGN_12B_R);
+	//printf("Testing testing?");
+  //HAL_UART_Init(&huart1);
+  //HAL_UART_Transmit(&huart1, (uint8_t *)"Testing testing\n", 17, 0xFFFF);
 	//HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
 
   /* USER CODE END 2 */
@@ -122,6 +123,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	printf("Testing testing\n");
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -153,10 +155,6 @@ void SystemClock_Config(void)
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
-  /** Macro to configure the PLL clock source
-  */
-  __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSE);
-
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -165,11 +163,11 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 3;
-  RCC_OscInitStruct.PLL.PLLN = 60;
+  RCC_OscInitStruct.PLL.PLLN = 240;
   RCC_OscInitStruct.PLL.PLLP = 2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
-  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
+  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
   RCC_OscInitStruct.PLL.PLLFRACN = 0;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)

@@ -195,7 +195,11 @@
   },
   "targets": {
     "dmaTest0": {
-      "excludeList": [],
+      "excludeList": [
+        "<virtual_root>/Application/User/Core/dma2d.c",
+        "<virtual_root>/Application/User/Core/fmc.c",
+        "<virtual_root>/Application/User/Core/ltdc.c"
+      ],
       "toolchain": "AC6",
       "compileConfig": {
         "cpuType": "Cortex-M7",
