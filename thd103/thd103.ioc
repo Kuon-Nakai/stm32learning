@@ -6,7 +6,7 @@ ADC1.IPParameters=Rank-0\#ChannelRegularConversion,master,Channel-0\#ChannelRegu
 ADC1.Mode=__NULL
 ADC1.NbrOfConversionFlag=1
 ADC1.Rank-0\#ChannelRegularConversion=1
-ADC1.SamplingTime-0\#ChannelRegularConversion=ADC_SAMPLETIME_13CYCLES_5
+ADC1.SamplingTime-0\#ChannelRegularConversion=ADC_SAMPLETIME_7CYCLES_5
 ADC1.master=1
 Dma.ADC1.1.Direction=DMA_PERIPH_TO_MEMORY
 Dma.ADC1.1.Instance=DMA1_Channel1
@@ -118,7 +118,11 @@ ProjectManager.StackSize=0x400
 ProjectManager.TargetToolchain=MDK-ARM V5
 ProjectManager.ToolChainLocation=
 ProjectManager.UnderRoot=false
+<<<<<<< Updated upstream
 ProjectManager.functionlistsort=1-SystemClock_Config-RCC-false-HAL-false,2-MX_GPIO_Init-GPIO-false-HAL-true,3-MX_DMA_Init-DMA-false-HAL-true,4-MX_ADC1_Init-ADC1-false-HAL-true,5-MX_DAC_Init-DAC-false-HAL-true,6-MX_USART1_UART_Init-USART1-false-HAL-true,7-MX_TIM8_Init-TIM8-false-HAL-true,8-MX_TIM2_Init-TIM2-false-HAL-true,9-MX_TIM3_Init-TIM3-false-HAL-true
+=======
+ProjectManager.functionlistsort=1-SystemClock_Config-RCC-false-HAL-false,2-MX_GPIO_Init-GPIO-false-HAL-true,3-MX_DMA_Init-DMA-false-HAL-true,4-MX_ADC1_Init-ADC1-false-HAL-true,5-MX_DAC_Init-DAC-false-HAL-true,6-MX_USART1_UART_Init-USART1-false-HAL-true,7-MX_TIM8_Init-TIM8-false-HAL-true,8-MX_ADC2_Init-ADC2-false-HAL-true
+>>>>>>> Stashed changes
 RCC.ADCFreqValue=12000000
 RCC.ADCPresc=RCC_ADCPCLK2_DIV6
 RCC.AHBFreq_Value=72000000
@@ -152,9 +156,15 @@ SH.ADCx_IN5.1=ADC2_IN5
 SH.ADCx_IN5.ConfNb=2
 SH.COMP_DAC1_group.0=DAC_OUT1,DAC_OUT1
 SH.COMP_DAC1_group.ConfNb=1
+<<<<<<< Updated upstream
 TIM8.AutoReloadPreload=TIM_AUTORELOAD_PRELOAD_DISABLE
 TIM8.IPParameters=Period,AutoReloadPreload,TIM_MasterOutputTrigger
 TIM8.Period=1124
+=======
+TIM8.AutoReloadPreload=TIM_AUTORELOAD_PRELOAD_ENABLE
+TIM8.IPParameters=Period,AutoReloadPreload,TIM_MasterOutputTrigger,TIM_MasterSlaveMode
+TIM8.Period=71
+>>>>>>> Stashed changes
 TIM8.TIM_MasterOutputTrigger=TIM_TRGO_UPDATE
 USART1.IPParameters=VirtualMode
 USART1.VirtualMode=VM_ASYNC

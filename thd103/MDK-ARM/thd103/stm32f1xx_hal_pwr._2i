@@ -1,0 +1,6 @@
+--c99 -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include
+-I.\RTE\_thd103
+-ID:\ArmPacks\ARM\CMSIS\5.9.0\CMSIS\Core\Include
+-ID:\ArmPacks\Keil\STM32F1xx_DFP\2.4.0\Device\Include
+-D__UVISION_VERSION="528" -D_RTE_ -DSTM32F10X_HD -DUSE_HAL_DRIVER -DSTM32F103xE
+-o thd103\stm32f1xx_hal_pwr.o --omf_browse thd103\stm32f1xx_hal_pwr.crf --depend thd103\stm32f1xx_hal_pwr.d --feedback "thd103\thd103.fed" "../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c"

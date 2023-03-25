@@ -2,6 +2,7 @@
 "thd103\startup_stm32f103xe.o"
 "thd103\lcd.o"
 "thd103\delay.o"
+"thd103\fft.o"
 "thd103\main.o"
 "thd103\gpio.o"
 "thd103\adc.o"

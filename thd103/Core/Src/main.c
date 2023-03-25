@@ -42,6 +42,11 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define ADC_DEBUG 1
+<<<<<<< Updated upstream
+=======
+#define fftSize 128
+#define ZERO_LINE 0x7FF
+>>>>>>> Stashed changes
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -56,9 +61,27 @@ uint32_t adcIn;
 uint16_t wait = 64;
 bool calc = false;
 float32_t *p;
+<<<<<<< Updated upstream
 float32_t rfft[64] = {0};
 float32_t rOut[64] = {0};
+=======
+float32_t rfft[256] = {0};
+float32_t rOut[256] = {0};
+#else
+struct compx *p;
+struct compx rfft[fftSize] = {0};
+//struct compx rOut[fftSize] = {0};
+#endif
+>>>>>>> Stashed changes
 float thd = -1;
+unsigned int tCap = 0xFF; // 8 freq samples
+int T = 0; // input freq / kHz
+int *Ts;
+int *pc;
+bool polarity = false; // true: higher than zero line, false: lower than zero line
+
+extern unsigned int fxK_n[6];
+
 //uint32_t dacVal;
 extern void delay_init(uint8_t);
 /* USER CODE END PV */
@@ -66,13 +89,18 @@ extern void delay_init(uint8_t);
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+<<<<<<< Updated upstream
 
+=======
+//float dataProc(void);
+void setFreq(int);
+float avg8(int *);
+>>>>>>> Stashed changes
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-	
-	
+
 /* USER CODE END 0 */
 
 /**
@@ -82,8 +110,9 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  Ts = (int *)malloc(256); // int32 x 8
 	p = rfft;
+	pc = Ts;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -114,8 +143,14 @@ int main(void)
 #if ADC_DEBUG
 	HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 #endif
-	HAL_TIM_Base_Start(&htim8);
 	HAL_ADC_Start_DMA(&hadc1, &adcIn, 1);
+<<<<<<< Updated upstream
+=======
+	HAL_TIM_Base_Start(&htim8);
+//#if !dsp
+//	init_rfft32();
+//#endif
+>>>>>>> Stashed changes
 //	delay_init(72);
 //	LCD_Init();
 //	POINT_COLOR = WHITE;
@@ -130,7 +165,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+<<<<<<< Updated upstream
 	  if(calc) {
+=======
+	  if(calc) { 
+		//float u1, u2, u3, u4, u5;
+#if dsp
+>>>>>>> Stashed changes
 		arm_rfft_fast_instance_f32 fftIns;
 		arm_rfft_fast_init_f32(&fftIns, 128);
 		arm_rfft_fast_f32(&fftIns, rfft, rOut, 0);
@@ -142,7 +183,19 @@ int main(void)
 		u5 = sqrtf(rfft[8]*rfft[8] + rfft[9]*rfft[9]);
 		thd= sqrtf(u2 + u3 + u4 + u5);
 		arm_sqrt_f32(u2 + u3 + u4 + u5, &thd);
+<<<<<<< Updated upstream
 		thd /= u1;
+=======
+#else
+		//rfft32(rfft, rOut);
+//		//thd = dataProc();
+		FFT(rfft);
+		Get_fxK_n(rfft);
+		thd = Get_Thd(Get_AmpFre(rfft, fxK_n, 1));
+#endif
+		//thd /= u1;
+		
+>>>>>>> Stashed changes
 		//__ASM("BKPT 0xAB");
 		//HAL_TIM_Base_Start(&htim8);
 		
@@ -205,13 +258,63 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+<<<<<<< Updated upstream
+=======
+
+inline float avg8(int *p) {
+  int sum = 0;
+  for(register int i = 0; i < 7; ++i) {
+    sum += *(++p);
+  }
+  return sum / 7;
+}
+
+/**
+ * @brief Set the trig frequency of ADC.
+ * 
+ * @param t Average samples in one cycle, at 1MHz.
+ */
+inline void setFreq(int t) {
+  __HAL_TIM_DISABLE(&htim8);
+  __HAL_TIM_SET_AUTORELOAD(&htim8, 720 * (t - t / 17) / fftSize);
+  __HAL_TIM_SET_COUNTER(&htim8, 0);
+  __HAL_TIM_ENABLE(&htim8);
+}
+
+>>>>>>> Stashed changes
 #if ADC_DEBUG
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	if(hadc->Instance == ADC1) {
 		//dacVal = adcIn;
 		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, adcIn);
 		if(calc) return;
+<<<<<<< Updated upstream
 		*p = (float)adcIn;
+=======
+    if(tCap) {
+      ++T;
+      if(adcIn > ZERO_LINE != polarity) {
+        polarity = !polarity;
+        if(polarity == true) return; // filter out rising edges
+        tCap >>= 1; // -1 captures
+        *(pc++) = T;
+        T = 0;
+        if(!tCap) {
+          T = avg8(Ts);
+          free(Ts);
+          Ts = NULL;
+          setFreq(T);
+        }
+      }
+      return;
+    }
+#if dsp
+		*p = (float)adcIn;
+#else
+		//*p = adcIn;
+		p->real = adcIn;
+#endif
+>>>>>>> Stashed changes
 		++p;
 		if(!--wait) {
 //			HAL_TIM_Base_Stop(&htim8);
