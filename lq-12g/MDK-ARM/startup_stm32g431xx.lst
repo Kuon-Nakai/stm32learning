@@ -667,10 +667,10 @@ ARM Macro Assembler    Page 11
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --depend=l
 q-12g\startup_stm32g431xx.d -olq-12g\startup_stm32g431xx.o -I.\RTE\_lq-12g -ID:
-\Arm\Packs\ARM\CMSIS\5.5.1\CMSIS\Core\Include -ID:\Arm\Packs\Keil\STM32G4xx_DFP
-\1.5.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include --predefine="__MICROLIB SETA 1
-" --predefine="__UVISION_VERSION SETA 528" --predefine="_RTE_ SETA 1" --predefi
-ne="STM32G431xx SETA 1" --list=startup_stm32g431xx.lst startup_stm32g431xx.s
+\ArmPacks\ARM\CMSIS\5.9.0\CMSIS\Core\Include -ID:\ArmPacks\Keil\STM32G4xx_DFP\1
+.5.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include --predefine="__MICROLIB SETA 1" 
+--predefine="__UVISION_VERSION SETA 528" --predefine="_RTE_ SETA 1" --predefine
+="STM32G431xx SETA 1" --list=startup_stm32g431xx.lst startup_stm32g431xx.s
 
 
 
