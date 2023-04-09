@@ -194,14 +194,14 @@ int main(void)
 		int  randomNum;
 	} Data;
 	Data data;
-//	strcpy(data.string, "Hell wooled");
-//	data.randomNum = 114514;
-//	eeWriteAny(0x10, &data, sizeof(data));
-//	HAL_Delay(5);
-	Data *readData = (Data *)eeReadAny(0x10, sizeof(data));
+	strcpy(data.string, "Hell wooled?");
+	data.randomNum = 1919810;
+	eeWriteAny(0x10, &data, sizeof(data));
+	HAL_Delay(5);
+	Data *readData = (Data *)eeReadAny(0x10, sizeof(Data));
 	printf("%s\n", readData->string);
 	printf("%d\n", readData->randomNum);
-	//eeDump();
+	eeDump();
   /* USER CODE END 2 */
 
   /* Infinite loop */
