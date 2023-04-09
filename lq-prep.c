@@ -11,23 +11,23 @@ int *x;
 typedef void *COMP_HandleTypeDef;
 TIM_HandleTypeDef htim2;
 DMA_HandleTypeDef hdma_usart1_rx;
-/* À¶ÇÅ±­¾ºÈü°å
-³£ÓÃÒı½Å
-    °´¼ü B1 - PB0, B2 - PB1, B3 - PB2, B4 - PA0
+/* è“æ¡¥æ¯ç«èµ›æ¿
+å¸¸ç”¨å¼•è„š
+    æŒ‰é”® B1 - PB0, B2 - PB1, B3 - PB2, B4 - PA0
     LED  LD1 - PC8, LD2 - PC9, LD3 - PC10, LD4 - PC11, LD5 - PC12, LD6 - PC13, LD7 - PC14, LD8 - PC15
-        ĞèÓÃPD2¿ØÖÆËø´æÆ÷
-        ÓÃHSIÊ±ÖÓÔ´
-    µçÑ¹²É¼¯ 1 -(J11)- PB15 , 2 -(J12)- PB2
-    ÆµÂÊÊä³ö 1 -(J9)- PB4   , 2 -(J10)- PA15
+        éœ€ç”¨PD2æ§åˆ¶é”å­˜å™¨
+        ç”¨HSIæ—¶é’Ÿæº
+    ç”µå‹é‡‡é›† 1 -(J11)- PB15 , 2 -(J12)- PB2
+    é¢‘ç‡è¾“å‡º 1 -(J9)- PB4   , 2 -(J10)- PA15
     I2C PB6, PB7
 */
 
-//Óöµ½startup¿¨ÔÚBKPT 0xAB, ÔÚOptions for target / targetÖĞ¿ªÆôUse MicroLIB
-//memcpy() sizeÖ¸ÄÚ´æ¸´ÖÆ×Ö½ÚÊı ²¢²»ÊÇÔªËØÊıÁ¿
-//I2CÇı¶¯²»º¬³õÊ¼»¯´úÂë ĞèÒªÉèÖÃºÃ¶ÔÓ¦Òı½Å
-//ÊäÈëÒı½ÅÃ»ÓĞºÏÊÊTIM¿ÉÓÃ ¿ÉÒÔÀûÓÃÄ£Äâ±È½ÏÆ÷remapµ½ºÏÊÊµÄTIM
+//é‡åˆ°startupå¡åœ¨BKPT 0xAB, åœ¨Options for target / targetä¸­å¼€å¯Use MicroLIB
+//memcpy() sizeæŒ‡å†…å­˜å¤åˆ¶å­—èŠ‚æ•° å¹¶ä¸æ˜¯å…ƒç´ æ•°é‡
+//I2Cé©±åŠ¨ä¸å«åˆå§‹åŒ–ä»£ç  éœ€è¦è®¾ç½®å¥½å¯¹åº”å¼•è„š
+//è¾“å…¥å¼•è„šæ²¡æœ‰åˆé€‚TIMå¯ç”¨ å¯ä»¥åˆ©ç”¨æ¨¡æ‹Ÿæ¯”è¾ƒå™¨remapåˆ°åˆé€‚çš„TIM
 
-//³£ÓÃ´úÂëÆ¬¶Î
+//å¸¸ç”¨ä»£ç ç‰‡æ®µ
 
 //include
 #include <stdio.h> //sprintf() / vsprintf()
@@ -38,7 +38,7 @@ DMA_HandleTypeDef hdma_usart1_rx;
 //#include "lcd.h"
 //#include "i2c.h"
 
-#pragma region LED¿ìËÙ²Ù×÷
+#pragma region LEDå¿«é€Ÿæ“ä½œ
 #define lds(x, s)\
     HAL_GPIO_WritePin(GPIOC, 0x80 << x, s); \
     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET);\
@@ -49,56 +49,56 @@ DMA_HandleTypeDef hdma_usart1_rx;
     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET)
 #pragma endregion
 
-#pragma region »ñÈ¡°´¼ü×´Ì¬
+#pragma region è·å–æŒ‰é”®çŠ¶æ€
 #define isKeyUp(x) HAL_HPIO_ReadPin(x == 4 ? GPIOA : GPIOB, (x - 1) % 3)
 #pragma endregion
 
-#pragma region ×Ö·û´®¸ñÊ½»¯Êä³ö´¦Àí
+#pragma region å­—ç¬¦ä¸²æ ¼å¼åŒ–è¾“å‡ºå¤„ç†
 uint8_t *format(char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    //×îÓÅĞ´·¨ µ« _vscprintf() ÔÚkeil¿ÉÄÜÎŞ·¨Ê¹ÓÃ:
+    //æœ€ä¼˜å†™æ³• ä½† _vscprintf() åœ¨keilå¯èƒ½æ— æ³•ä½¿ç”¨:
     uint8_t *buffer = (uint8_t *)malloc(_vscprintf(fmt, ap) + 1);
-    //¶¨³¤ ¶¯Ì¬·ÖÅä
+    //å®šé•¿ åŠ¨æ€åˆ†é…
     uint8_t *buffer = (uint8_t *)malloc(32);
-    //¶¨³¤ ¾²Ì¬»º³å
+    //å®šé•¿ é™æ€ç¼“å†²
     memset(buffer, 0, 32);
     
     vsprintf(buffer, fmt, ap);
     return buffer;
-    //¶¯Ì¬·ÖÅäÄÚ´æÊ¹ÓÃºófree()
+    //åŠ¨æ€åˆ†é…å†…å­˜ä½¿ç”¨åfree()
 }
 #pragma endregion
 
-#pragma region ADCĞ£×¼, ¿ªÆô(DMA)
+#pragma region ADCæ ¡å‡†, å¼€å¯(DMA)
 void main_() {
     HAL_ADCEx_Calibration_Start(&hadc1);
-    HAL_ADC_Start_DMA(&hadc1, /*±äÁ¿»òÊı×éÖ¸Õë*/x, /*Êı×é³¤¶È*/x);
+    HAL_ADC_Start_DMA(&hadc1, /*å˜é‡æˆ–æ•°ç»„æŒ‡é’ˆ*/x, /*æ•°ç»„é•¿åº¦*/x);
 }
 #pragma endregion
 
-#pragma region ¶ÁÈ¡ÆµÂÊ
-//TIMÉèÎªReset mode, TI1FP_.
-//ÊäÈëÒı½ÅÉèÎªInput capture direct mode
-//ÊÕµ½ÊäÈëĞÅºÅºó»áÏÈ´¥·¢ÖĞ¶Ï ÔÙ×Ô¶¯½«¼ÆÊıÆ÷¸´Î» ¿ÉÒÔ¼ò»¯´úÂë
-//×¢Òâ¶ÁÈ¡²¶»ñÖµÓÃHAL_TIM_ReadCapturedValue() ¶ø²»ÓÃGetCounterºê ÒòÎª¼ÆÊıÆ÷Öµ»á¼ÌĞø±ä»¯
+#pragma region è¯»å–é¢‘ç‡
+//TIMè®¾ä¸ºReset mode, TI1FP_.
+//è¾“å…¥å¼•è„šè®¾ä¸ºInput capture direct mode
+//æ”¶åˆ°è¾“å…¥ä¿¡å·åä¼šå…ˆè§¦å‘ä¸­æ–­ å†è‡ªåŠ¨å°†è®¡æ•°å™¨å¤ä½ å¯ä»¥ç®€åŒ–ä»£ç 
+//æ³¨æ„è¯»å–æ•è·å€¼ç”¨HAL_TIM_ReadCapturedValue() è€Œä¸ç”¨GetCounterå® å› ä¸ºè®¡æ•°å™¨å€¼ä¼šç»§ç»­å˜åŒ–
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-    if(htim->Instance == TIMx) {//ÅĞ¶Ï
+    if(htim->Instance == TIMx) {//åˆ¤æ–­
         int freq = clk / psc / ckd / HAL_TIM_ReadCapturedValue(&htimx, TIM_CHANNEL_x);
         //...
     }
 }
 #pragma endregion
 
-#pragma region PWMÊäÈë
+#pragma region PWMè¾“å…¥
 //Alt: Combined channel - PWM input
-//Ô­ÀíÉÏÏàÍ¬
+//åŸç†ä¸Šç›¸åŒ
 
-//TIMÉèÎªReset mode, ´¥·¢Ô´ÉèÎªÊäÈëÒı½Å
-//ÊäÈëÒı½ÅÉèÎªInput capture direct mode, ÉÏÉıÑØ²¶»ñ
-//ÁíÉèÒ»¸öÒı½ÅÎªInput capture indirect mode, ÏÂ½µÑØ²¶»ñ
-//directÒı½Å²¶»ñÖµ¼´ÎªÖÜÆÚ indirectÒı½Å²¶»ñÖµÎª¸ßµçÆ½Ê±¼ä
-//×¢ÒâÅĞ¶ÏÒı½ÅÊ±ĞèÒªÓÃHAL_TIM_ACTIVE_CHANNEL_x ¶ø²»ÊÇTIM_CHANNEL_x
+//TIMè®¾ä¸ºReset mode, è§¦å‘æºè®¾ä¸ºè¾“å…¥å¼•è„š
+//è¾“å…¥å¼•è„šè®¾ä¸ºInput capture direct mode, ä¸Šå‡æ²¿æ•è·
+//å¦è®¾ä¸€ä¸ªå¼•è„šä¸ºInput capture indirect mode, ä¸‹é™æ²¿æ•è·
+//directå¼•è„šæ•è·å€¼å³ä¸ºå‘¨æœŸ indirectå¼•è„šæ•è·å€¼ä¸ºé«˜ç”µå¹³æ—¶é—´
+//æ³¨æ„åˆ¤æ–­å¼•è„šæ—¶éœ€è¦ç”¨HAL_TIM_ACTIVE_CHANNEL_x è€Œä¸æ˜¯TIM_CHANNEL_x
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
     if(htim->Instance == TIMx && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_x) {
         int t = HAL_TIM_ReadCapturedValue(&htimx, TIM_CHANNEL_x);
@@ -107,23 +107,23 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 }
 #pragma endregion
 
-#pragma region ´®¿Ú¿ÕÏĞÖĞ¶Ï
-//ÓÃUARTÍØÕ¹¿â ¹¤×÷Á¿½ÏĞ¡
+#pragma region ä¸²å£ç©ºé—²ä¸­æ–­
+//ç”¨UARTæ‹“å±•åº“ å·¥ä½œé‡è¾ƒå°
 void main_() {
     //...init
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *)rxBuf, (rxSize));
 }
-//»Øµ÷º¯Êı
+//å›è°ƒå‡½æ•°
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
     if(huart->Instance == USART1) {
         //...
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *)rxBuf, (rxSize)); //ÖØĞÂ´ò¿ª
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *)rxBuf, (rxSize)); //é‡æ–°æ‰“å¼€
     }
 }
 #pragma endregion
 
-//°´¼üÊäÈë¼ì²â
-#pragma region method 1: °´¼üÉ¨Ãè
+//æŒ‰é”®è¾“å…¥æ£€æµ‹
+#pragma region method 1: æŒ‰é”®æ‰«æ
 void main_(void) {
     //...
     while(1) {
@@ -133,14 +133,14 @@ void main_(void) {
     }
 }
 #pragma endregion
-#pragma region method 2: GPIO+COMP EXTIÖĞ¶Ï
-//ÅäÖÃB1 B2 B3(PB0 PB1 PB2)ÎªEXTI 0 1 2Ïß ÅäÖÃB4ÎªCOMP3ÕıÊäÈë VrefÎª¸ºÊäÈë È«²¿ÉèÖÃÏÂ½µÑØ²¶»ñ ¿ªÆôEXTI0 1 2ÏßºÍCOMP3ÖĞ¶Ï ÓÅÏÈ¼¶3
-//ÖĞ¶Ï»Øµ÷º¯Êı:
+#pragma region method 2: GPIO+COMP EXTIä¸­æ–­
+//é…ç½®B1 B2 B3(PB0 PB1 PB2)ä¸ºEXTI 0 1 2çº¿ é…ç½®B4ä¸ºCOMP3æ­£è¾“å…¥ Vrefä¸ºè´Ÿè¾“å…¥ å…¨éƒ¨è®¾ç½®ä¸‹é™æ²¿æ•è· å¼€å¯EXTI0 1 2çº¿å’ŒCOMP3ä¸­æ–­ ä¼˜å…ˆçº§3
+//ä¸­æ–­å›è°ƒå‡½æ•°:
 void HAL_COMP_TriggerCallback(COMP_HandleTypeDef *hcomp) { //b4
-    //Âß¼­Ìõ¼şÅĞ¶Ï
+    //é€»è¾‘æ¡ä»¶åˆ¤æ–­
     HAL_Delay(32);
     if(isKeyUp(4)) return;
-    //°´¼üÏìÓ¦²Ù×÷
+    //æŒ‰é”®å“åº”æ“ä½œ
 }
 void HAL_GPIO_EXTI_Callback(uint16_t pin) {
     switch(pin) {
@@ -157,11 +157,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 }
 #pragma endregion
 
-#pragma region EEPROM¶ÁĞ´º¯Êı
-//×¢ÒâÔÚCubeMX¿ªÆôPB6 PB7µÄGPIO Output.
-//×¢ÒâÔÚÃ¿´Î¶ÁĞ´ºóÈ·±£ÑÓÊ±5ms
-//0xA0 Ğ´/¶¨Î», 0xA1¶Á
-//¿ÉÀûÓÃÖ¸ÕëÊµÏÖ¶ÔÈÎÒâÀàĞÍµÄ¶ÁĞ´
+#pragma region EEPROMè¯»å†™å‡½æ•°
+//æ³¨æ„åœ¨CubeMXå¼€å¯PB6 PB7çš„GPIO Output.
+//æ³¨æ„åœ¨æ¯æ¬¡è¯»å†™åç¡®ä¿å»¶æ—¶5ms
+//0xA0 å†™/å®šä½, 0xA1è¯»
+//å¯åˆ©ç”¨æŒ‡é’ˆå®ç°å¯¹ä»»æ„ç±»å‹çš„è¯»å†™
 
 /**
  * @brief       Writes value of 1 byte to the specified address in EEPROM.
@@ -252,13 +252,13 @@ void *eeReadAny(uint8_t addr, uint8_t size)
 }
 #pragma endregion
 
-#pragma region ÑÓÊ±Ö´ĞĞº¯ÊıµÄ·½·¨
-//ÉèÖÃÈÎÒâ¶¨Ê±Æ÷ ¿ªÆôÒç³öÖĞ¶Ï ÔÚÖĞ¶Ï»Øµ÷º¯ÊıÖĞµ÷ÓÃtickDelays() (»òÖ±½Ó°ÑtickDelays¸Ä³ÉHAL_TIM_PeriodElapsedCallbackº¯Êı)
-//µ÷ÓÃnewDelay¿ÉÒÔ×Ô¶¯ÅäÖÃĞÂµÄÑÓÊ±ÈÎÎñ
-//²ÎÊıactive:   ÊÇ·ñ¼ÆÊ± falseÔò²»½øĞĞÈÎºÎ²Ù×÷ Ö±µ½±»¸ÄÎªtrue
-//²ÎÊıinvoke:   ÑÓÊ±½áÊøºóµ÷ÓÃµÄº¯Êı
-//²ÎÊıdelay:    µ÷ÓÃinvokeÇ°µÄÒç³ö´ÎÊı note:ÎŞ·¨±ÜÃâ1´ÎÒç³öÊ±¼äÒÔÄÚµÄÆ«²î ÔÚÖ´ĞĞÆµÂÊ*²»Ó°ÏìÔËĞĞ*µÄÌõ¼şÏÂ ×îºÃ°ÑÆµÂÊÉèÖÃ½Ï¸ß
-//²ÎÊıactivate: Ö¸ÏòÁíÒ»¸öDelayedActionÀàĞÍµÄÖ¸Õë ÔÚÖ¸ÏòµÄÈÎÎñÑÓÊ±½áÊø invokeµ÷ÓÃÍê±Ïºó ½«µ±Ç°ÈÎÎñactive×Ô¶¯ÉèÖÃÎªtrue ÔÚÏÂÒ»´ÎÒç³ö¿ªÊ¼¼ÆÊ± ²»ĞèÒªÕâ¸ö¹¦ÄÜ¿É´«ÈëNULL
+#pragma region å»¶æ—¶æ‰§è¡Œå‡½æ•°çš„æ–¹æ³•
+//è®¾ç½®ä»»æ„å®šæ—¶å™¨ å¼€å¯æº¢å‡ºä¸­æ–­ åœ¨ä¸­æ–­å›è°ƒå‡½æ•°ä¸­è°ƒç”¨tickDelays() (æˆ–ç›´æ¥æŠŠtickDelaysæ”¹æˆHAL_TIM_PeriodElapsedCallbackå‡½æ•°)
+//è°ƒç”¨newDelayå¯ä»¥è‡ªåŠ¨é…ç½®æ–°çš„å»¶æ—¶ä»»åŠ¡
+//å‚æ•°active:   æ˜¯å¦è®¡æ—¶ falseåˆ™ä¸è¿›è¡Œä»»ä½•æ“ä½œ ç›´åˆ°è¢«æ”¹ä¸ºtrue
+//å‚æ•°invoke:   å»¶æ—¶ç»“æŸåè°ƒç”¨çš„å‡½æ•°
+//å‚æ•°delay:    è°ƒç”¨invokeå‰çš„æº¢å‡ºæ¬¡æ•° note:æ— æ³•é¿å…1æ¬¡æº¢å‡ºæ—¶é—´ä»¥å†…çš„åå·® åœ¨æ‰§è¡Œé¢‘ç‡*ä¸å½±å“è¿è¡Œ*çš„æ¡ä»¶ä¸‹ æœ€å¥½æŠŠé¢‘ç‡è®¾ç½®è¾ƒé«˜
+//å‚æ•°activate: æŒ‡å‘å¦ä¸€ä¸ªDelayedActionç±»å‹çš„æŒ‡é’ˆ åœ¨æŒ‡å‘çš„ä»»åŠ¡å»¶æ—¶ç»“æŸ invokeè°ƒç”¨å®Œæ¯•å å°†å½“å‰ä»»åŠ¡activeè‡ªåŠ¨è®¾ç½®ä¸ºtrue åœ¨ä¸‹ä¸€æ¬¡æº¢å‡ºå¼€å§‹è®¡æ—¶ ä¸éœ€è¦è¿™ä¸ªåŠŸèƒ½å¯ä¼ å…¥NULL
 
 typedef struct {
     bool active;            //Whether the delay should be ticked
@@ -328,8 +328,8 @@ void tickDelays() {
 }
 #pragma endregion
 
-#pragma region ÑÓÊ±º¯Êı¸Ä½ø - ´ı²âÊÔ
-//³¢ÊÔÀûÓÃ¶¨Ê±Æ÷½µµÍ×ÊÔ´Õ¼ÓÃ²¢¼ò»¯´æ´¢½á¹¹
+#pragma region å»¶æ—¶å‡½æ•°æ”¹è¿› - å¾…æµ‹è¯•
+//å°è¯•åˆ©ç”¨å®šæ—¶å™¨é™ä½èµ„æºå ç”¨å¹¶ç®€åŒ–å­˜å‚¨ç»“æ„
 
 typedef struct _DelayedFunction {
     //DelayedFunction *prev;
@@ -361,23 +361,23 @@ DelayedFunction *addDelay(uint32_t t, void (*func)(void), DelayedFunction *after
 
 #pragma endregion
 
-//ÍØÕ¹°åÄ£¿é
-#pragma region ÊıÂë¹Ü
-//Á¬½Ó SER RCK SCK ¿ØÖÆËø´æÆ÷
-//SER - Êı¾İÏß, RCK - ÉÏÉıÑØÊä³ö´æ´¢Öµ, SCK - ÉÏÉıÑØ´æÈëSERµÄ×´Ì¬²¢½«´æ´¢×óÒÆÒ»Î»
-//×¢Òâº¯ÊıĞèÒª´Ón3µ½n1²Ù×÷
+//æ‹“å±•æ¿æ¨¡å—
+#pragma region æ•°ç ç®¡
+//è¿æ¥ SER RCK SCK æ§åˆ¶é”å­˜å™¨
+//SER - æ•°æ®çº¿, RCK - ä¸Šå‡æ²¿è¾“å‡ºå­˜å‚¨å€¼, SCK - ä¸Šå‡æ²¿å­˜å…¥SERçš„çŠ¶æ€å¹¶å°†å­˜å‚¨å·¦ç§»ä¸€ä½
+//æ³¨æ„å‡½æ•°éœ€è¦ä»n3åˆ°n1æ“ä½œ
 //GPIO PA1 PA2 PA3 
 uint8_t Seg[10] = {0b1110'1110, 0b0010'1000, 0b1100'1101, 0b0110'1101, 0b0010'1011, 0b0110'0111, 0b1110'0111, 0b0010'1100, 0b1110'1111, 0b01101111};
 uint8_t SegDot  = 0b0001'0000;
-//Èı¸ö²ÎÊı: Seg[Êı×Ö]¿ÉÏÔÊ¾ÏàÓ¦Êı×Ö »ò (Seg[Êı×Ö] | SegDot) ÏÔÊ¾¼ÓµãµÄÊı×Ö
+//ä¸‰ä¸ªå‚æ•°: Seg[æ•°å­—]å¯æ˜¾ç¤ºç›¸åº”æ•°å­— æˆ– (Seg[æ•°å­—] | SegDot) æ˜¾ç¤ºåŠ ç‚¹çš„æ•°å­—
 void SegShow(uint8_t n1, uint8_t n2, uint8_t n3) {
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET); // RCK
     for(int i = 8; i--; ) {
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, !(n3 & 0b1000'0000)); // ÅĞ¶Ï×î¸ßÎ» Êä³öµ½SER
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, !(n3 & 0b1000'0000)); // åˆ¤æ–­æœ€é«˜ä½ è¾“å‡ºåˆ°SER
         n3 <<= 1;
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_SET); // SCKÉú³ÉÉÏÉıÑØ Ğ´Èë´æ´¢
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_SET); // SCKç”Ÿæˆä¸Šå‡æ²¿ å†™å…¥å­˜å‚¨
     }
     for (int i = 8; i--;) {
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
@@ -394,13 +394,13 @@ void SegShow(uint8_t n1, uint8_t n2, uint8_t n3) {
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_SET);
     }
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET); // RCKÉÏÉıÑØ Êä³öµ½ÊıÂë¹Ü
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET); // RCKä¸Šå‡æ²¿ è¾“å‡ºåˆ°æ•°ç ç®¡
 }
 #pragma endregion
 
-#pragma region ADC°´¼ü
-//°´¼üÊ¶±ğ¿ÉÓÃADC¶ÁÈ¡µçÑ¹, ÅĞ¶Ï·¶Î§À´ÊµÏÖ
-//Òı½Å: PA5 - ADC2_IN13
+#pragma region ADCæŒ‰é”®
+//æŒ‰é”®è¯†åˆ«å¯ç”¨ADCè¯»å–ç”µå‹, åˆ¤æ–­èŒƒå›´æ¥å®ç°
+//å¼•è„š: PA5 - ADC2_IN13
 void main_() {
     HAL_ADCEx_Calibration_Start(&hadc2);
     HAL_ADC_Start_IT(&hadc2);
@@ -408,11 +408,11 @@ void main_() {
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if(hadc->Instance != ADC2) return;
     HAL_ADC_GetValue(&hadc2);
-    //ÅĞ¶Ï Ö´ĞĞ
+    //åˆ¤æ–­ æ‰§è¡Œ
 }
 #pragma endregion
 
-#pragma region ¶ÓÁĞ½á¹¹
+#pragma region é˜Ÿåˆ—ç»“æ„
 typedef struct _QueueItem {
     void *val;
     QueueItem *next;
